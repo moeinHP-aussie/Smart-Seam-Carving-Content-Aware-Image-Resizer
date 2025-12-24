@@ -7,6 +7,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/Algorithm-Dynamic--Programming-red.svg" alt="Algorithm">
+  <img src="https://img.shields.io/badge/Domain-Image--Processing-cyan.svg" alt="Domain">
   <img src="https://img.shields.io/badge/AI-K--Means-green.svg" alt="AI Feature">
   <img src="https://img.shields.io/badge/UI-CustomTkinter-orange.svg" alt="UI Framework">
 </p>
