@@ -1,147 +1,152 @@
-import customtkinter as ctk
+import sys
 import cv2
 import numpy as np
-from PIL import Image
-import threading
-from tkinter import filedialog, messagebox
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QLabel, QPushButton,
+    QFileDialog, QHBoxLayout, QVBoxLayout, QWidget,
+    QSpinBox, QRadioButton, QCheckBox, QProgressBar,
+    QMessageBox, QGroupBox
+)
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from seam_carving_core import SeamCarverCore
 
-class App(ctk.CTk):
+class Worker(QThread):
+    progress = pyqtSignal(int)
+    update = pyqtSignal(object)
+    finished = pyqtSignal(object)
+
+    def __init__(self, image, n, mode):
+        super().__init__()
+        self.image = image
+        self.n = n
+        self.mode = mode
+
+    def run(self):
+        core = SeamCarverCore(self.image)
+        for i in range(1, self.n + 1):
+            preview, result = core.step(self.mode)
+            self.update.emit(preview)
+            self.progress.emit(i)
+        self.finished.emit(result)
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.title("Smart Seam Carver - Content Aware Resizer")
-        self.geometry("1150x700")
-        self.core = None
+        self.setWindowTitle("Smart Seam Carving - Multi-scale Enabled")
+        self.resize(1200, 800)
+        self.image = None
+        self.result_image = None
+        self._build_ui()
 
-        # --- طراحی Sidebar (منوی تنظیمات) ---
-        self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0)
-        self.sidebar.pack(side="left", fill="y", padx=10, pady=10)
+    def _build_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        main_layout = QVBoxLayout(central)
 
-        ctk.CTkLabel(self.sidebar, text="Seam Carving", font=("Helvetica", 24, "bold")).pack(pady=20)
+        # پنل کنترل بالایی
+        ctrl_layout = QHBoxLayout()
         
-        # دکمه بارگذاری: از متد ایمن برای مسیرهای فارسی استفاده می‌کند
-        self.btn_load = ctk.CTkButton(self.sidebar, text="1. Load Image", command=self.load_image)
-        self.btn_load.pack(pady=10)
+        self.btn_load = QPushButton("Load Image")
+        self.btn_load.clicked.connect(self.load_image)
 
-        # دکمه پیش‌پردازش: اجرای کلاستربندی در ترد جداگانه
-        self.btn_pre = ctk.CTkButton(self.sidebar, text="2. Run AI Pre-process", state="disabled", command=self.run_pre_thread)
-        self.btn_pre.pack(pady=10)
+        self.spin = QSpinBox()
+        self.spin.setRange(1, 1000)
+        self.spin.setValue(50)
 
-        self.mode_var = ctk.StringVar(value="Vertical")
-        self.mode_menu = ctk.CTkOptionMenu(self.sidebar, values=["Vertical", "Horizontal", "Smart"], variable=self.mode_var)
-        self.mode_menu.pack(pady=10)
+        # انتخاب حالت
+        mode_group = QGroupBox("Mode")
+        m_layout = QVBoxLayout(mode_group)
+        self.rb_v = QRadioButton("Vertical")
+        self.rb_h = QRadioButton("Horizontal")
+        self.rb_s = QRadioButton("Smart")
+        self.rb_s.setChecked(True)
+        for r in (self.rb_v, self.rb_h, self.rb_s): m_layout.addWidget(r)
 
-        self.entry_n = ctk.CTkEntry(self.sidebar, placeholder_text="Pixels to remove")
-        self.entry_n.pack(pady=10)
+        # چک‌باکس مولتی‌اسکیل
+        self.chk_multi = QCheckBox("Enable Multi-scale (Faster)")
+        self.chk_multi.setToolTip("Downscales the image to 50% size before processing.")
 
-        self.btn_run = ctk.CTkButton(self.sidebar, text="3. Start Processing", state="disabled", fg_color="#27ae60", command=self.run_main_thread)
-        self.btn_run.pack(pady=10)
+        self.btn_run = QPushButton("Run")
+        self.btn_run.setStyleSheet("background-color: green; color: white; font-weight: bold;")
+        self.btn_run.clicked.connect(self.run_algorithm)
 
-        self.progress = ctk.CTkProgressBar(self.sidebar)
-        self.progress.set(0)
-        self.progress.pack(pady=30, padx=20)
+        self.btn_save = QPushButton("Save")
+        self.btn_save.clicked.connect(self.save_result)
 
-        # --- طراحی بدنه اصلی (نمایش تصاویر) ---
-        self.display = ctk.CTkFrame(self)
-        self.display.pack(side="right", expand=True, fill="both", padx=10, pady=10)
+        ctrl_layout.addWidget(self.btn_load)
+        ctrl_layout.addWidget(QLabel("Seams:"))
+        ctrl_layout.addWidget(self.spin)
+        ctrl_layout.addWidget(mode_group)
+        ctrl_layout.addWidget(self.chk_multi) # اضافه شدن چک باکس به UI
+        ctrl_layout.addWidget(self.btn_run)
+        ctrl_layout.addWidget(self.btn_save)
 
-        self.lbl_orig = ctk.CTkLabel(self.display, text="Original View")
-        self.lbl_orig.pack(side="left", expand=True)
+        self.progress = QProgressBar()
+        
+        # بخش نمایش تصاویر
+        img_layout = QHBoxLayout()
+        self.before = QLabel("Before")
+        self.after = QLabel("After (Processing...)")
+        for l in (self.before, self.after):
+            l.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            l.setStyleSheet("border: 1px solid gray; background: #eee;")
+            img_layout.addWidget(l)
 
-        self.lbl_res = ctk.CTkLabel(self.display, text="Processed Result")
-        self.lbl_res.pack(side="right", expand=True)
+        main_layout.addLayout(ctrl_layout)
+        main_layout.addWidget(self.progress)
+        main_layout.addLayout(img_layout)
 
     def load_image(self):
-        """ خواندن تصویر با متد imdecode برای پشتیبانی از کاراکترهای فارسی در مسیر فایل """
-        path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.png *.jpeg")])
+        path, _ = QFileDialog.getOpenFileName(self, "Open Image")
         if path:
-            try:
-                # خواندن فایل به صورت باینری (حل مشکل NoneType)
-                raw_data = np.fromfile(path, np.uint8)
-                img = cv2.imdecode(raw_data, cv2.IMREAD_COLOR)
-                
-                if img is not None:
-                    self.core = SeamCarverCore(img)
-                    self.update_display(img, is_orig=True)
-                    self.update_display(img, is_orig=False)
-                    self.btn_pre.configure(state="normal")
-                else:
-                    raise Exception("Decode Failed")
-            except Exception as e:
-                messagebox.showerror("Error", f"Could not read the file! \nCheck path for special characters.")
+            raw = np.fromfile(path, np.uint8)
+            self.image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+            self.display_image(self.image, self.before)
+            self.result_image = None
 
-    def update_display(self, img, is_orig=False):
-        """ تبدیل ماتریس OpenCV به فرمت قابل نمایش در رابط کاربری (PIL Image) """
-        img_rgb = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        img_pil.thumbnail((480, 480)) # تغییر اندازه برای نمایش متناسب در پنل
-        ctk_img = ctk.CTkImage(img_pil, size=img_pil.size)
-        if is_orig: self.lbl_orig.configure(image=ctk_img, text="")
-        else: self.lbl_res.configure(image=ctk_img, text="")
-
-    def run_pre_thread(self):
-        """ اجرای مرحله پیش‌پردازش در یک ترد جداگانه برای جلوگیری از فریز شدن UI """
-        self.btn_pre.configure(state="disabled")
-        self.progress.configure(mode="indeterminate")
-        self.progress.start()
-        threading.Thread(target=self.do_pre, daemon=True).start()
-
-    def do_pre(self):
-        """ وظیفه‌ای که در پس‌زمینه اجرا می‌شود (K-Means) """
-        self.core.preprocess_step(k=64)
-        self.after(0, self.finish_pre)
-
-    def finish_pre(self):
-        """ بازگشت به ترد اصلی بعد از اتمام پیش‌پردازش """
-        self.progress.stop()
-        self.progress.configure(mode="determinate")
-        self.progress.set(1.0)
-        self.update_display(self.core.current_image, False)
-        self.btn_run.configure(state="normal")
-        messagebox.showinfo("Success", "AI Analysis & Quantization Completed!")
-
-    def run_main_thread(self):
-        """ شروع فرآیند اصلی Seam Carving با مدیریت ترد """
-        try:
-            n = int(self.entry_n.get())
-            mode = self.mode_var.get()
-            valid, limit = self.core.validate_request(n, mode)
-            if not valid:
-                messagebox.showwarning("Limit Warning", f"Requested size is too small. Max allowed: {limit}")
-                return
-            
-            self.btn_run.configure(state="disabled")
-            threading.Thread(target=self.do_resize, args=(n, mode), daemon=True).start()
-        except ValueError:
-            messagebox.showerror("Error", "Please enter a valid integer for pixel count.")
-
-    def do_resize(self, n, mode):
-        """ حلقه اصلی حذف درزها با آپدیت لحظه‌ای نوار پیشرفت """
-        for i in range(n):
-            if mode == "Vertical": 
-                self.core.remove_vertical_seam()
-            elif mode == "Horizontal":
-                self.core.current_image = np.rot90(self.core.current_image, 1)
-                self.core.remove_vertical_seam()
-                self.core.current_image = np.rot90(self.core.current_image, 3)
-            elif mode == "Smart":
-                # تصمیم‌گیری هوشمند: حذف جهتی که کمترین انرژی را مصرف می‌کند
-                if self.core.get_seam_energy('v') <= self.core.get_seam_energy('h'):
-                    self.core.remove_vertical_seam()
-                else:
-                    self.core.current_image = np.rot90(self.core.current_image, 1)
-                    self.core.remove_vertical_seam()
-                    self.core.current_image = np.rot90(self.core.current_image, 3)
-            
-            # آپدیت نوار پیشرفت و تصویر در هر مرحله (استفاده از after برای ایمنی ترد)
-            self.after(0, lambda v=(i+1)/n: self.progress.set(v))
-            if i % 10 == 0: # برای افزایش سرعت، تصویر هر 10 مرحله یکبار آپدیت می‌شود
-                self.after(0, lambda: self.update_display(self.core.current_image, False))
+    def run_algorithm(self):
+        if self.image is None: return
         
-        self.after(0, lambda: self.update_display(self.core.current_image, False))
-        self.after(0, lambda: messagebox.showinfo("Finished", "Smart Resizing completed successfully!"))
-        self.after(0, lambda: self.btn_run.configure(state="normal"))
+        # اعمال Multi-scale در صورت فعال بودن
+        processing_img = self.image.copy()
+        if self.chk_multi.isChecked():
+            processing_img = SeamCarverCore.downscale(processing_img, scale=0.5)
+            # نمایش تصویر کوچک شده در بخش After برای اطلاع کاربر
+            self.display_image(processing_img, self.after)
+
+        mode = "smart" if self.rb_s.isChecked() else ("horizontal" if self.rb_h.isChecked() else "vertical")
+        self.progress.setMaximum(self.spin.value())
+        self.btn_run.setEnabled(False)
+        
+        self.worker = Worker(processing_img, self.spin.value(), mode)
+        self.worker.update.connect(lambda img: self.display_image(img, self.after))
+        self.worker.progress.connect(self.progress.setValue)
+        self.worker.finished.connect(self.on_finished)
+        self.worker.start()
+
+    def on_finished(self, img):
+        self.result_image = img
+        self.btn_run.setEnabled(True)
+        QMessageBox.information(self, "Finished", "Image resized successfully!")
+
+    def save_result(self):
+        if self.result_image is None: return
+        path, _ = QFileDialog.getSaveFileName(self, "Save Image", "", "PNG (*.png);;JPG (*.jpg)")
+        if path:
+            ext = ".png" if path.endswith(".png") else ".jpg"
+            res, buf = cv2.imencode(ext, self.result_image)
+            if res: buf.tofile(path)
+
+    def display_image(self, img, label):
+        rgb = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
+        h, w, c = rgb.shape
+        qimg = QImage(rgb.data, w, h, c * w, QImage.Format.Format_RGB888)
+        pix = QPixmap.fromImage(qimg).scaled(label.width(), label.height(), Qt.AspectRatioMode.KeepAspectRatio)
+        label.setPixmap(pix)
 
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
