@@ -1,5 +1,5 @@
 <div align="center">
-  <h1> Smart Seam Carving: Content-Aware Image Resizer</h1>
+  <h1> " Smart Seam Carving: Content-Aware Image Resizer"</h1>
   <p><b>A high-performance seam carving tool with multi-scale support and intelligent seam selection</b></p>
 </div>
 
@@ -12,24 +12,26 @@
   <img src="https://img.shields.io/badge/UI-PyQt6-orange.svg" alt="UI Framework">
   <img src="https://img.shields.io/badge/Optimization-Vectorized%20NumPy-green.svg" alt="Optimization">
   <img src="https://img.shields.io/badge/Feature-Multi--scale-yellow.svg" alt="Multi-scale">
+  <img src="https://img.shields.io/badge/Boundary-Infinity%20Padding-brightgreen.svg" alt="Boundary Handling">
 </p>
 
 <h2>📌 Overview</h2>
 <p align="justify">
-This project implements a <b>Content-Aware Image Resizing</b> tool based on the Seam Carving algorithm. Unlike traditional scaling, which distorts the image, or cropping, which removes edges, this tool intelligently removes "seams" (paths of least importance) to resize images while preserving essential visual content. The implementation features a modern PyQt6 GUI, multi-scale processing for speed, and a smart mode that automatically selects the optimal seam direction.
+This project implements a <b>Content-Aware Image Resizing</b> tool based on the Seam Carving algorithm. Unlike traditional scaling which distorts the image or cropping which removes edges, this tool intelligently removes "seams" (paths of least importance) to resize images while preserving essential visual content. The implementation features a modern PyQt6 GUI, multi-scale processing for speed, and a smart mode that automatically selects the optimal seam direction with proper boundary condition handling.
 </p>
 
 <h2>✨ Key Features</h2>
 <ul>
-  <li><b>Smart Mode:</b> Automatically chooses between horizontal and vertical seam removal based on global energy cost.</li>
-  <li><b>Multi-scale Support:</b> Optional downscaling before processing to dramatically speed up operations on large images.</li>
-  <li><b>Vectorized DP:</b> Fully vectorized Dynamic Programming implementation using NumPy for real-time performance.</li>
-  <li><b>Modern PyQt6 GUI:</b> Responsive, multi-threaded interface with live preview and progress tracking.</li>
-  <li><b>Live Preview:</b> Visualizes seams in red during processing for better user insight.</li>
-  <li><b>Energy-based Seam Detection:</b> Uses LAB color space and Sobel operators for robust energy mapping.</li>
+  <li><b>Smart Mode:</b> Automatically chooses between horizontal and vertical seam removal based on global energy cost comparison</li>
+  <li><b>Multi-scale Support:</b> Optional downscaling before processing to dramatically speed up operations on large images</li>
+  <li><b>Optimized Vectorized DP:</b> Fully vectorized Dynamic Programming implementation with infinity padding for boundary conditions</li>
+  <li><b>Modern PyQt6 GUI:</b> Responsive, multi-threaded interface with live preview and progress tracking</li>
+  <li><b>Boundary-Aware Algorithm:</b> Proper handling of edge pixels using infinity padding technique</li>
+  <li><b>Real-time Preview:</b> Visualizes seams in red during processing for better user insight</li>
+  <li><b>High Performance:</b> Vectorized NumPy operations for near-C speed</li>
 </ul>
 
-<h2>🛠 Technical Pipeline</h2>
+<h2>🛠 Technical Implementation</h2>
 
 <h3>1️⃣ Energy Map Calculation</h3>
 <p>
@@ -39,81 +41,94 @@ The image is converted to the <b>LAB color space</b>, and the <b>L-channel (Ligh
   $E = |G_x| + |G_y|$
 </p>
 
-<h3>2️⃣ Multi-scale Preprocessing (Optional)</h3>
-<p>
-For large images, the <b>downscale</b> method reduces the image size by a factor (default 0.5) using area interpolation (<code>cv2.INTER_AREA</code>). This speeds up seam carving significantly while maintaining visual integrity.
-</p>
+```python
+def energy_map(self, img):
+    lab = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2LAB)
+    L, _, _ = cv2.split(lab)
+    L = cv2.GaussianBlur(L, (3, 3), 0)
 
-<h3>3️⃣ Dynamic Programming Seam Search</h3>
-<p>
-A cumulative cost matrix is computed using a fully vectorized DP approach:
-</p>
-<p align="center">
-  $C(i, j) = E(i, j) + \min(C(i-1, j-1), C(i-1, j), C(i-1, j+1))$
-</p>
-<p>
-Backtracking is then performed from the bottom row to extract the optimal seam path.
-</p>
+    gx = cv2.Sobel(L, cv2.CV_64F, 1, 0, ksize=3)
+    gy = cv2.Sobel(L, cv2.CV_64F, 0, 1, ksize=3)
+    return np.abs(gx) + np.abs(gy) 
+```
+<h3>2️⃣ Boundary-Aware Seam Finding with Infinity Padding</h3> <p> The core innovation in this implementation is the use of <b>infinity padding</b> for handling boundary conditions in the DP algorithm. This elegant approach eliminates conditional statements and allows for fully vectorized operations: </p>
 
-<h3>4️⃣ Smart Direction Selection</h3>
-<p>
-In <b>Smart Mode</b>, the algorithm computes the total energy cost for both vertical and horizontal seams (by rotating the image) and chooses the direction with the lower cost, ensuring minimal visual distortion.
-</p>
+```python
 
-<h3>5️⃣ Multi-threaded Processing with PyQt6</h3>
-<p>
-The GUI runs the carving process in a separate <code>QThread</code>, ensuring the interface remains responsive. The progress bar updates in real time, and the "After" panel shows a live preview of the removed seams.
-</p>
+def find_vertical_seam(self, energy):
+
+
+    h, w = energy.shape
+    cost = energy.copy()
+    
+    for i in range(1, h):
+        prev_row = cost[i-1]
+        left = np.insert(prev_row[:-1], 0, np.inf)    # Pad left with infinity
+        right = np.append(prev_row[1:], np.inf)       # Pad right with infinity
+        center = prev_row
+        
+        cost[i] += np.minimum(center, np.minimum(left, right))
+
+    # Backtracking برای پیدا کردن مسیر درز
+    seam = np.zeros(h, dtype=int)
+    seam[-1] = np.argmin(cost[-1])
+
+    for i in range(h-2, -1, -1):
+        prev_x = seam[i+1]
+        start = max(0, prev_x - 1)
+        end = min(w, prev_x + 2)
+        seam[i] = start + np.argmin(cost[i, start:end])
+    
+    return seam, cost[-1, seam[-1]]
+
+ ```
+<h3>3️⃣ Multi-scale Processing Pipeline</h3> <p> For large images, the algorithm can optionally downsample before processing to significantly improve performance: </p>
+
+```python
+  @staticmethod
+  def downscale(img, scale=0.5):
+      h, w = img.shape[:2]
+      return cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+```
+<h3>4️⃣ Intelligent Direction Selection (Smart Mode)</h3> <p> In <b>Smart Mode</b>, the algorithm computes the total energy cost for both vertical and horizontal seams and chooses the direction with the lower cost: </p>
+```python
+
+def step(self, mode="smart"):
+
+    img = self.image
+    actual_mode = mode
+
+    if mode == "smart":
+        ev = self.energy_map(img)
+        _, cost_v = self.find_vertical_seam(ev)
+        
+        img_h = np.rot90(img, 1, (0, 1))
+        eh = self.energy_map(img_h)
+        _, cost_h = self.find_vertical_seam(eh)
+        
+        actual_mode = "vertical" if cost_v <= cost_h else "horizontal"
+    
+    # ...
+```
+
+<h3>5️⃣ Seam Removal and Image Reconstruction</h3> <p> After finding the optimal seam, it's removed from the image using boolean masking: </p>
+
+```python
+def remove_vertical_seam(self, img, seam):
+    h, w = img.shape[:2]
+    mask = np.ones((h, w), dtype=bool)
+    mask[np.arange(h), seam] = False
+    return img[mask].reshape(h, w - 1, 3)
+```
 
 <h2>📁 Project Structure</h2>
-<pre>
+
+<h3>Visual Features:</h3> <ul> <li>Seams are shown in red during processing</li> <li>Real-time updates during multi-threaded processing</li> <li>Responsive layout that adapts to window size</li> <li>Professional styling with green "Run" button</li> </ul><h2>⚡ Performance Optimization</h2><h3>Multi-scale Processing:</h3> <p> When the "Multi-scale" option is enabled, the image is downscaled to 50% of its original size before processing. This can reduce processing time by up to <b>75%</b> on high-resolution images while maintaining visual quality. </p><h3>Vectorized Operations:</h3> <p> All critical computations use NumPy's vectorized operations instead of Python loops: </p> <ul> <li>Energy map calculation with OpenCV filters</li> <li>DP matrix computation with np.minimum</li> <li>Seam removal with boolean array masking</li> </ul><h3>Memory Efficiency:</h3> <ul> <li>Images processed in float64 precision to prevent overflow</li> <li>In-place operations where possible</li> <li>Efficient array slicing instead of copying</li> </ul><h2>🔬 Technical Details</h2><h3>Algorithm Complexity:</h3> <ul> <li><b>Time Complexity:</b> O(n × m) where n is number of seams and m is image pixels</li> <li><b>Space Complexity:</b> O(w × h) for the DP cost matrix</li> <li><b>Optimized for:</b> Large images with multi-scale, small images with full resolution</li> </ul><h3>Color Space Selection:</h3> <p> The algorithm uses <b>LAB color space</b> instead of RGB because: </p> <ul> <li>LAB separates luminance (L) from color channels</li> <li>Human vision is more sensitive to luminance changes</li> <li>Better edge detection in the L-channel</li> </ul><h3>Edge Detection Methodology:</h3> <p> Sobel operators are preferred over other edge detectors because: </p> <ul> <li>Computationally efficient</li> <li>Provides directional gradient information</li> <li>Less sensitive to noise than simple gradient methods</li> <li>Well-suited for energy map creation</li> </ul><h2>🎯 Use Cases</h2><h3>Ideal Applications:</h3> <ul> <li><b>Content-Aware Image Resizing:</b> Resize images without distorting important content</li> <li><b>Image Retargeting:</b> Adapt images to different aspect ratios</li> <li><b>Object Removal:</b> Remove unwanted objects by repeatedly removing seams</li> <li><b>Educational Tool:</b> Learn about dynamic programming and image processing</li> </ul><h3>Example Scenarios:</h3> <ol> <li><b>Web Design:</b> Adapt product images to fit different container sizes</li> <li><b>Mobile Development:</b> Create responsive images for various screen sizes</li> <li><b>Photography:</b> Adjust image composition without cropping</li> <li><b>Research:</b> Experiment with content-aware image manipulation</li> </ol><h2>⚠️ Limitations & Considerations</h2><h3>Current Limitations:</h3> <ul> <li>Only supports seam removal (not insertion)</li> <li>Batch processing not implemented</li> <li>No protection masks for important regions</li> <li>Limited to RGB/BGR color images</li> </ul><h3>Best Practices:</h3> <ol> <li>Use Multi-scale for images larger than 2MP for better performance</li> <li>Start with small seam counts and gradually increase</li> <li>Use Smart mode for general-purpose resizing</li> <li>Save original images before extensive processing</li> </ol><h2>🔄 Comparison with Traditional Methods</h2><table> <tr> <th>Method</th> <th>Advantages</th> <th>Disadvantages</th> </tr> <tr> <td><b>Traditional Scaling</b></td> <td>Simple, fast</td> <td>Distorts entire image uniformly</td> </tr> <tr> <td><b>Cropping</b></td> <td>Preserves quality in selected region</td> <td>Loses content at edges</td> </tr> <tr> <td><b>Seam Carving (This Project)</b></td> <td>Preserves important content, removes low-energy regions</td> <td>Computationally intensive, can create artifacts in complex scenes</td> </tr> </table><h2>🚀 Future Improvements</h2><h3>Planned Features:</h3> <ul> <li>Seam insertion for image enlargement</li> <li>Protection masks for important regions</li> <li>Batch processing mode</li> <li>GPU acceleration support</li> <li>Additional energy functions</li> <li>Video seam carving support</li> </ul><h3>Research Directions:</h3> <ul> <li>Deep learning-based energy functions</li> <li>Real-time seam carving for video</li> <li>3D seam carving for volumetric data</li> <li>Multi-objective seam optimization</li> </ul><h2>🤝 Contributing</h2><p>Contributions are welcome! Here's how you can help:</p><ol> <li><b>Report Bugs:</b> Open an issue with detailed bug reports</li> <li><b>Suggest Features:</b> Propose new features or improvements</li> <li><b>Submit Code:</b> Create pull requests with well-documented changes</li> <li><b>Improve Documentation:</b> Help enhance this README or add tutorials</li> </ol>
 project/
-├── project_MAIN_gui.py      # PyQt6 main window and UI logic
+├── project_MAIN_gui.py      # Main PyQt6 GUI application
 ├── seam_carving_core.py     # Core seam carving algorithm
-└── README.md                # This file
-</pre>
+└── README.md                # This documentation
 
-<h2>📦 Requirements</h2>
-<pre><code>pip install numpy opencv-python PyQt6</code></pre>
+<h2>📦 Installation & Requirements</h2><pre><code>pip install numpy opencv-python PyQt6</code></pre><h3>Dependencies:</h3> <ul> <li><b>Python 3.10+</b>: Required for modern Python features</li> <li><b>NumPy</b>: For efficient numerical computations</li> <li><b>OpenCV-Python</b>: For image processing operations</li> <li><b>PyQt6</b>: For the graphical user interface</li> </ul>
 
-<h2>🚀 How to Run</h2>
-<ol>
-  <li>Clone the repository or download the source files.</li>
-  <li>Install dependencies using the command above.</li>
-  <li>Run the GUI:
-    <pre><code>python project_MAIN_gui.py</code></pre>
-  </li>
-  <li>Use the interface:
-    <ul>
-      <li>Click <b>Load Image</b> to select an image.</li>
-      <li>Choose the number of seams to remove.</li>
-      <li>Select a mode: <b>Vertical</b>, <b>Horizontal</b>, or <b>Smart</b>.</li>
-      <li>Enable <b>Multi-scale</b> for faster processing on large images.</li>
-      <li>Click <b>Run</b> to start seam carving.</li>
-      <li>Save the result with <b>Save</b> when processing finishes.</li>
-    </ul>
-  </li>
-</ol>
-
-<h2>🎨 UI Overview</h2>
-<p>The interface is divided into:</p>
-<ul>
-  <li><b>Control Panel:</b> Load image, set parameters, choose mode, enable multi-scale, run, and save.</li>
-  <li><b>Progress Bar:</b> Visual feedback during processing.</li>
-  <li><b>Image Panels:</b> Side-by-side display of original and processed images with live seam preview.</li>
-</ul>
-
-<h2>⚡ Performance Notes</h2>
-<ul>
-  <li>Multi-scale mode can reduce processing time by up to 75% on high-resolution images.</li>
-  <li>The vectorized DP implementation avoids Python loops, leveraging NumPy for near-C speed.</li>
-  <li>Smart mode adds a small overhead for energy comparison but yields better visual results.</li>
-</ul>
-
-<h2>📄 License</h2>
-<p>This project is open-source and available for educational and research purposes.</p>
-
-<hr>
-<div align="center">
-  <p>Developed with ❤️ for Advanced Image Processing and Algorithmic Research</p>
-</div>
+<p>Developed with ❤️ for the image processing</p>
