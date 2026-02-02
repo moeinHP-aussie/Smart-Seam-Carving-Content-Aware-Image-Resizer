@@ -6,7 +6,7 @@ class SeamCarverCore:
     کلاس هسته‌ی الگوریتم Seam Carving
     
     ویژگی‌ها:
-    - محاسبات برداری (Vectorized) برای سرعت بالا
+    - محاسبات برداری با مدیریت دقیق شرایط مرزی
     - حالت Smart برای مقایسه انرژی افقی و عمودی
     - متد Static برای قابلیت Multi-scale
     """
@@ -16,7 +16,7 @@ class SeamCarverCore:
         سازنده کلاس
         image: تصویر ورودی (BGR)
         """
-        # تبدیل به float64 برای جلوگیری از خطای سرریز در محاسبات Sobel
+        # تبدیل به float64 برای جلوگیری از خطای سرریز در محاسبات
         self.image = image.astype(np.float64)
 
     def energy_map(self, img):
@@ -30,33 +30,40 @@ class SeamCarverCore:
         return np.abs(gx) + np.abs(gy)
 
     def find_vertical_seam(self, energy):
-        """ یافتن درز با DP (نسخه سریع Vectorized) """
+        """ 
+        یافتن درز با DP (بهینه‌شده با Padding برای هندل کردن شرایط مرزی)
+        """
         h, w = energy.shape
         cost = energy.copy()
         
-        # محاسبه ماتریس هزینه تجمعی
+        # محاسبه ماتریس هزینه تجمعی با در نظر گرفتن مرزها
         for i in range(1, h):
-            m1 = cost[i-1, :-2]
-            m2 = cost[i-1, 1:-1]
-            m3 = cost[i-1, 2:]
-            cost[i, 1:-1] += np.minimum(m1, np.minimum(m2, m3))
-            cost[i, 0] += min(cost[i-1, 0], cost[i-1, 1])
-            cost[i, -1] += min(cost[i-1, -1], cost[i-1, -2])
+            # ایجاد یک کپی از سطر قبلی با پدینگ بی‌نهایت در طرفین
+            # این کار باعث می‌شود پیکسل‌های لبه هم به درستی 3 همسایه بالایی را چک کنند
+            prev_row = cost[i-1]
+            left = np.insert(prev_row[:-1], 0, np.inf)
+            right = np.append(prev_row[1:], np.inf)
+            center = prev_row
+            
+            # انتخاب کمترین هزینه از بین (چپ، وسط، راست) برای کل سطر به صورت یکجا
+            cost[i] += np.minimum(center, np.minimum(left, right))
 
-        # بازگشت (Backtracking)
+        # Backtracking
         seam = np.zeros(h, dtype=int)
         seam[-1] = np.argmin(cost[-1])
         total_energy = cost[-1, seam[-1]]
 
         for i in range(h-2, -1, -1):
             prev_x = seam[i+1]
-            start, end = max(0, prev_x-1), min(w, prev_x+2)
+            # محدود کردن محدوده جستجو در سطر بالایی بین ستون‌های همسایه
+            start = max(0, prev_x - 1)
+            end = min(w, prev_x + 2)
             seam[i] = start + np.argmin(cost[i, start:end])
         
         return seam, total_energy
 
     def remove_vertical_seam(self, img, seam):
-        """ حذف فیزیکی درز """
+        """ حذف فیزیکی درز از تصویر """
         h, w = img.shape[:2]
         mask = np.ones((h, w), dtype=bool)
         mask[np.arange(h), seam] = False
@@ -67,6 +74,7 @@ class SeamCarverCore:
         img = self.image
         actual_mode = mode
 
+        # منطق تصمیم‌گیری حالت اسمارت
         if mode == "smart":
             ev = self.energy_map(img)
             _, cost_v = self.find_vertical_seam(ev)
@@ -77,15 +85,20 @@ class SeamCarverCore:
             
             actual_mode = "vertical" if cost_v <= cost_h else "horizontal"
 
+        # چرخش تصویر در صورت نیاز
         work_img = np.rot90(self.image, 1, (0, 1)) if actual_mode == "horizontal" else self.image
+        
         energy = self.energy_map(work_img)
         seam_idx, _ = self.find_vertical_seam(energy)
 
+        # پیش‌نمایش درز قرمز
         preview = work_img.copy()
         preview[np.arange(work_img.shape[0]), seam_idx] = [0, 0, 255]
 
+        # حذف درز
         res_img = self.remove_vertical_seam(work_img, seam_idx)
 
+        # بازگرداندن چرخش
         if actual_mode == "horizontal":
             res_img = np.rot90(res_img, 3, (0, 1))
             preview = np.rot90(preview, 3, (0, 1))
@@ -95,11 +108,6 @@ class SeamCarverCore:
 
     @staticmethod
     def downscale(img, scale=0.5):
-        """ 
-        بخش Multi-scale: 
-        کوچک کردن تصویر قبل از پردازش برای افزایش سرعت در تصاویر بزرگ
-        """
+        """ کاهش ابعاد برای افزایش سرعت """
         h, w = img.shape[:2]
-        new_w = int(w * scale)
-        new_h = int(h * scale)
-        return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        return cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
