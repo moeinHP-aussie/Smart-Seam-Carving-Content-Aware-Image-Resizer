@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🚀 Smart Seam Carving: Content-Aware Image Resizer</h1>
+  <h1> Smart Seam Carving: Content-Aware Image Resizer</h1>
   <p><b>A high-performance seam carving tool with multi-scale support and intelligent seam selection</b></p>
 </div>
 
