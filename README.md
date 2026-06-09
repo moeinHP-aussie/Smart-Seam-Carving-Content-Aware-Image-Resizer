@@ -131,4 +131,3 @@ project/
 
 <h2>📦 Installation & Requirements</h2><pre><code>pip install numpy opencv-python PyQt6</code></pre><h3>Dependencies:</h3> <ul> <li><b>Python 3.10+</b>: Required for modern Python features</li> <li><b>NumPy</b>: For efficient numerical computations</li> <li><b>OpenCV-Python</b>: For image processing operations</li> <li><b>PyQt6</b>: For the graphical user interface</li> </ul>
 
-<p>Developed with ❤️ for the image processing</p>
