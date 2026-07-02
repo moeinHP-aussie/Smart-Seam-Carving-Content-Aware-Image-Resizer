@@ -32,7 +32,7 @@ The following examples demonstrate the effectiveness of the smart seam carving a
 | **Toy Story**<br>(Horizontal Resize) | <img src="sample%20pictures/Toy%20story.jpg" width="280"/> | <img src="sample%20pictures/toystory_resize_horizontal.png" width="280"/> |
 | **Soul**<br>(Vertical Resize) | <img src="sample%20pictures/soul.jpg" width="280"/> | <img src="sample%20pictures/soul_resize_vertical.png" width="280"/> |
 | **Adam and Eve**<br>(Vertical Resize) | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2.jpeg" width="280"/> | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2_resize_vertical.png" width="280"/> |
-| **Sports Photography**<br>(Horizontal Resize) | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1.jpeg" width="280"/> | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1%20resize_horizontal.jpg" width="280"/> |
+| **Sports Photography**<br>(Horizontal Resize) | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1.jpeg" width="280"/> | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1_resize_horizontal.jpg" width="280"/> |
 
 ---
 
