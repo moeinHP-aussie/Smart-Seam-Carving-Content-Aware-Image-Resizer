@@ -20,6 +20,31 @@
 This project implements a <b>Content-Aware Image Resizing</b> tool based on the Seam Carving algorithm. Unlike traditional scaling which distorts the image or cropping which removes edges, this tool intelligently removes "seams" (paths of least importance) to resize images while preserving essential visual content. The implementation features a modern PyQt6 GUI, multi-scale processing for speed, and a smart mode that automatically selects the optimal seam direction with proper boundary condition handling.
 </p>
 
+
+## 🖼️ Results
+
+The following examples demonstrate the effectiveness of the smart seam carving algorithm on different types of images.
+
+| Example | Original | Content-Aware Result |
+|:-------:|:--------:|:--------------------:|
+| **Cats** | <img src="sample%20pictures/cats.jpg" width="280"/> | <img src="sample%20pictures/cats_resize_smart.png" width="280"/> |
+| **Wildlife** | <img src="sample%20pictures/wildlife.jpg" width="280"/> | <img src="sample%20pictures/wildlife_resize_smart.png" width="280"/> |
+| **Toy Story**<br>(Horizontal Resize) | <img src="sample%20pictures/Toy%20story.jpg" width="280"/> | <img src="sample%20pictures/toystory_resize_horizontal.png" width="280"/> |
+| **Soul**<br>(Vertical Resize) | <img src="sample%20pictures/soul.jpg" width="280"/> | <img src="sample%20pictures/soul_resize_vertical.png" width="280"/> |
+| **Adam and Eve**<br>(Vertical Resize) | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2.jpeg" width="280"/> | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2_resize_vertical.png" width="280"/> |
+| **Sports Photography**<br>(Horizontal Resize) | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1.jpeg" width="280"/> | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1%20resize_horizontal.jpg" width="280"/> |
+
+---
+
+## 🖥️ Graphical User Interface
+
+The application provides an intuitive GUI for loading images, selecting resizing modes, and visualizing the output.
+
+<p align="center">
+    <img src="sample%20pictures/Screenshot%202026-07-02%20210910.png" width="900">
+</p>
+
+
 <h2>✨ Key Features</h2>
 <ul>
   <li><b>Smart Mode:</b> Automatically chooses between horizontal and vertical seam removal based on global energy cost comparison</li>
