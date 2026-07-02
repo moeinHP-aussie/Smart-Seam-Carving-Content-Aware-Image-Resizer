@@ -21,27 +21,112 @@ This project implements a <b>Content-Aware Image Resizing</b> tool based on the 
 </p>
 
 
-## 🖼️ Results
+## 🖥️ Graphical User Interface
 
-The following examples demonstrate the effectiveness of the smart seam carving algorithm on different types of images.
+The application provides an intuitive graphical interface for loading images, selecting resizing modes, choosing seam carving directions, and visualizing the results in real time.
 
-| Example | Original | Content-Aware Result |
-|:-------:|:--------:|:--------------------:|
-| **Cats** | <img src="sample%20pictures/cats.jpg" width="280"/> | <img src="sample%20pictures/cats_resize_smart.png" width="280"/> |
-| **Wildlife** | <img src="sample%20pictures/wildlife.jpg" width="280"/> | <img src="sample%20pictures/wildlife_resize_smart.png" width="280"/> |
-| **Toy Story**<br>(Horizontal Resize) | <img src="sample%20pictures/Toy%20story.jpg" width="280"/> | <img src="sample%20pictures/toystory_resize_horizontal.png" width="280"/> |
-| **Soul**<br>(Vertical Resize) | <img src="sample%20pictures/soul.jpg" width="280"/> | <img src="sample%20pictures/soul_resize_vertical.png" width="280"/> |
-| **Adam and Eve**<br>(Vertical Resize) | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2.jpeg" width="280"/> | <img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2_resize_vertical.png" width="280"/> |
-| **Sports Photography**<br>(Horizontal Resize) | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1.jpeg" width="280"/> | <img src="sample%20pictures/winners-world-sports-photography-awards-2023-1_resize_horizontal.jpg" width="280"/> |
+<p align="center">
+    <img src="sample%20pictures/Screenshot%202026-07-02%20210910.png" width="95%">
+</p>
 
 ---
 
-## 🖥️ Graphical User Interface
+## 🖼️ Results
 
-The application provides an intuitive GUI for loading images, selecting resizing modes, and visualizing the output.
+The following examples showcase the effectiveness of the Smart Seam Carving algorithm on various images while preserving visually important content during resizing.
+
+### 🐱 Cats
 
 <p align="center">
-    <img src="sample%20pictures/Screenshot%202026-07-02%20210910.png" width="900">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/cats.jpg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/cats_resize_smart.png" width="85%">
+</p>
+
+---
+
+### 🦁 Wildlife
+
+<p align="center">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/wildlife.jpg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/wildlife_resize_smart.png" width="85%">
+</p>
+
+---
+
+### 🤠 Toy Story (Horizontal Resize)
+
+<p align="center">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/Toy%20story.jpg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/toystory_resize_horizontal.png" width="85%">
+</p>
+
+---
+
+### 👻 Soul (Vertical Resize)
+
+<p align="center">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/soul.jpg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/soul_resize_vertical.png" width="85%">
+</p>
+
+---
+
+### 🎨 Adam and Eve (Vertical Resize)
+
+<p align="center">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2.jpeg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/Creating-Adam-And-Eve-By-Kevin-Wood-2_resize_vertical.png" width="85%">
+</p>
+
+---
+
+### 🏅 Sports Photography (Horizontal Resize)
+
+<p align="center">
+<b>Original Image</b><br><br>
+<img src="sample%20pictures/winners-world-sports-photography-awards-2023-1.jpeg" width="85%">
+</p>
+
+<p align="center">⬇️</p>
+
+<p align="center">
+<b>Content-Aware Result</b><br><br>
+<img src="sample%20pictures/winners-world-sports-photography-awards-2023-1_resize_horizontal.jpg" width="85%">
 </p>
 
 
